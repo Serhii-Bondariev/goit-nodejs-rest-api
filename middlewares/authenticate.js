@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import HttpError from "../helpers/handleMongooseError.js";
+import HttpError from "../helpers/HttpError.js";
 
 import User from "../models/user.js";
 

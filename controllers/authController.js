@@ -5,10 +5,12 @@ import gravatar from "gravatar";
 import path from "path";
 import fs from "fs/promises";
 import Jimp from "jimp";
-
 import HttpError from "../helpers/HttpError.js";
 import User from "../models/user.js";
 import sendEmail from "../helpers/sendEmail.js";
+
+const { UKRNET_MAIL_FROM, BASE_URL, SECRET_KEY, UKRNET_MAIL_PASSWORD } =
+  process.env;
 const avatarsDir = path.resolve("public", "avatars");
 
 export const register = async (req, res) => {
@@ -27,10 +29,10 @@ export const register = async (req, res) => {
 
   const verifyEmail = {
     to: email,
-    from: "jw.listal@gmail.com",
-    subject: "Welcome to phonebook",
+    from: UKRNET_MAIL_FROM,
+    subject: "Verify email",
     http: `<a target="_blank" href="${BASE_URL}/api/users/verify/${verificationToken}">Click to verify email</a>`,
-    text: `To confirm your registration please open the link ${BASE_URL}/api/users/verify/${verificationToken}`,
+    text: `Click to verify email ${BASE_URL}/api/users/verify/${verificationToken}`,
   };
   await sendEmail(verifyEmail);
 
@@ -76,10 +78,10 @@ export const resendVerifyEmail = async (req, res) => {
   const { BASE_URL } = process.env;
   const verifyEmail = {
     to: email,
-    from: "jw.listal@gmail.com",
-    subject: "Welcome to phonebook",
+    from: UKRNET_MAIL_FROM,
+    subject: "Verify email",
     http: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${user.verificationToken}">Click to verify email</a>`,
-    text: `To confirm your registration please open the link ${BASE_URL}/api/auth/verify/${user.verificationToken}`,
+    text: `Click to verify email ${BASE_URL}/api/auth/verify/${user.verificationToken}`,
   };
   await sendEmail(verifyEmail);
 

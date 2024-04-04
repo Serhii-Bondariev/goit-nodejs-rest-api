@@ -1,7 +1,4 @@
-const validateBody = require("./validateBody");
-const isEmptyBody = require("./isEmptyBody");
-
-module.exports = {
-  validateBody,
-  isEmptyBody,
-};
+export { default as isEmptyBody } from "./isEmptyBody.js";
+export { default as isEmptyFavorite } from "./isEmptyFavorite.js";
+export { default as isValidId } from "./isValidId.js";
+export { default as authenticate } from "./authenticate.js";

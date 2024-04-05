@@ -25,7 +25,7 @@ export const register = async (req, res) => {
     const hashPassword = await bcrypt.hash(password, 10);
     const avatarURL = gravatar.url(email);
 
-    const { BASE_URL, UKRNET_MAIL_FROM } = process.env; // Додайте UKRNET_MAIL_FROM
+    const { BASE_URL, UKRNET_MAIL_FROM } = process.env;
 
     const verificationToken = nanoid();
 
@@ -84,7 +84,7 @@ export const resendVerifyEmail = async (req, res) => {
     if (user.verify) {
       throw HttpError(400, "Verification has already been passed");
     }
-    const { BASE_URL, UKRNET_MAIL_FROM } = process.env; // Додайте UKRNET_MAIL_FROM
+    const { BASE_URL, UKRNET_MAIL_FROM } = process.env;
 
     const verifyEmail = {
       to: email,

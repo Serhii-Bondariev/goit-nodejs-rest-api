@@ -31,9 +31,16 @@ export const register = async (req, res) => {
     to: email,
     from: UKRNET_MAIL_FROM,
     subject: "Verify email",
-    http: `<a target="_blank" href="${BASE_URL}/api/users/verify/${verificationToken}">Click to verify email</a>`,
-    text: `Click to verify email ${BASE_URL}/api/users/verify/${verificationToken}`,
+    html: `Please, verify your email <a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
   };
+
+  // const verifyEmail = {
+  //   to: email,
+  //   from: UKRNET_MAIL_FROM,
+  //   subject: "Verify email",
+  //   http: `<a target="_blank" href="${BASE_URL}/verify/${verificationToken}">Click to verify email</a>`,
+  //   // text: `Click to verify email ${BASE_URL}/api/users/verify/${verificationToken}`,
+  // };
   await sendEmail(verifyEmail);
 
   const newUser = await User.create({
@@ -76,13 +83,20 @@ export const resendVerifyEmail = async (req, res) => {
     throw HttpError(400, "Verification has already been passed");
   }
   const { BASE_URL } = process.env;
+  // const verifyEmail = {
+  //   to: email,
+  //   from: UKRNET_MAIL_FROM,
+  //   subject: "Verify email",
+  //   http: `<a target="_blank" href="${BASE_URL}/verify/${user.verificationToken}">Click to verify email</a>`,
+  //   // text: `Click to verify email ${BASE_URL}/api/auth/verify/${user.verificationToken}`,
+  // };
   const verifyEmail = {
     to: email,
     from: UKRNET_MAIL_FROM,
     subject: "Verify email",
-    http: `<a target="_blank" href="${BASE_URL}/api/auth/verify/${user.verificationToken}">Click to verify email</a>`,
-    text: `Click to verify email ${BASE_URL}/api/auth/verify/${user.verificationToken}`,
+    html: `Please, verify your email <a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
   };
+
   await sendEmail(verifyEmail);
 
   res.json({
@@ -114,7 +128,7 @@ export const login = async (req, res) => {
   };
   const { SECRET_KEY } = process.env;
 
-  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
+  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "24h" });
   await User.findByIdAndUpdate(user._id, { token });
   res.status(200).json({
     token,

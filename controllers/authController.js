@@ -14,129 +14,131 @@ const { UKRNET_MAIL_FROM, BASE_URL, SECRET_KEY, UKRNET_MAIL_PASSWORD } =
 const avatarsDir = path.resolve("public", "avatars");
 
 export const register = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
 
-  if (user) {
-    throw HttpError(409, "Email in use");
+    if (user) {
+      throw HttpError(409, "Email in use");
+    }
+
+    const hashPassword = await bcrypt.hash(password, 10);
+    const avatarURL = gravatar.url(email);
+
+    const { BASE_URL, UKRNET_MAIL_FROM } = process.env; // Додайте UKRNET_MAIL_FROM
+
+    const verificationToken = nanoid();
+
+    const verifyEmail = {
+      to: email,
+      from: UKRNET_MAIL_FROM,
+      subject: "Verify email",
+      text: `Click to verify email ${BASE_URL}/api/users/verify/${verificationToken}`,
+    };
+    await sendEmail(verifyEmail);
+
+    const newUser = await User.create({
+      ...req.body,
+      password: hashPassword,
+      avatarURL,
+      verificationToken,
+    });
+    res.status(201).json({
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+      },
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
-
-  const hashPassword = await bcrypt.hash(password, 10);
-  const avatarURL = gravatar.url(email);
-
-  const { BASE_URL } = process.env;
-  const verificationToken = nanoid();
-
-  const verifyEmail = {
-    to: email,
-    from: UKRNET_MAIL_FROM,
-    subject: "Verify email",
-    html: `Please, verify your email <a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
-  };
-
-  // const verifyEmail = {
-  //   to: email,
-  //   from: UKRNET_MAIL_FROM,
-  //   subject: "Verify email",
-  //   http: `<a target="_blank" href="${BASE_URL}/verify/${verificationToken}">Click to verify email</a>`,
-  //   // text: `Click to verify email ${BASE_URL}/api/users/verify/${verificationToken}`,
-  // };
-  await sendEmail(verifyEmail);
-
-  const newUser = await User.create({
-    ...req.body,
-    password: hashPassword,
-    avatarURL,
-    verificationToken,
-  });
-  res.status(201).json({
-    user: {
-      email: newUser.email,
-      subscription: newUser.subscription,
-    },
-  });
 };
 
 export const verifyEmail = async (req, res) => {
-  const { verificationToken } = req.params;
+  try {
+    const { verificationToken } = req.params;
 
-  const user = await User.findOne({ verificationToken });
-  console.log(user);
-  if (user === null) {
-    throw HttpError(404, "User not found");
+    const user = await User.findOne({ verificationToken });
+
+    if (!user) {
+      throw HttpError(404, "User not found");
+    }
+    await User.findByIdAndUpdate(user._id, {
+      verify: true,
+      verificationToken: null,
+    });
+
+    res.status(200).json({
+      message: "Verification successful",
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
-  await User.findByIdAndUpdate(user._id, {
-    verify: true,
-    verificationToken: null,
-  });
-
-  res.status(200).json({
-    message: "Verification successful",
-  });
 };
 
 export const resendVerifyEmail = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
 
-  if (user.verify) {
-    throw HttpError(400, "Verification has already been passed");
+    if (user.verify) {
+      throw HttpError(400, "Verification has already been passed");
+    }
+    const { BASE_URL, UKRNET_MAIL_FROM } = process.env; // Додайте UKRNET_MAIL_FROM
+
+    const verifyEmail = {
+      to: email,
+      from: UKRNET_MAIL_FROM,
+      subject: "Verify email",
+      text: `Click to verify email ${BASE_URL}/api/users/verify/${user.verificationToken}`,
+    };
+    await sendEmail(verifyEmail);
+
+    res.json({
+      message: "Verify email send",
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
-  const { BASE_URL } = process.env;
-  // const verifyEmail = {
-  //   to: email,
-  //   from: UKRNET_MAIL_FROM,
-  //   subject: "Verify email",
-  //   http: `<a target="_blank" href="${BASE_URL}/verify/${user.verificationToken}">Click to verify email</a>`,
-  //   // text: `Click to verify email ${BASE_URL}/api/auth/verify/${user.verificationToken}`,
-  // };
-  const verifyEmail = {
-    to: email,
-    from: UKRNET_MAIL_FROM,
-    subject: "Verify email",
-    html: `Please, verify your email <a target="_blank" href="${BASE_URL}/users/verify/${verificationToken}">Click verify email</a>`,
-  };
-
-  await sendEmail(verifyEmail);
-
-  res.json({
-    message: "Verify email send",
-  });
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-  if (!user) {
-    throw HttpError(401, "Email or password invalid");
+    if (!user) {
+      throw HttpError(401, "Email or password invalid");
+    }
+
+    if (!user.verify) {
+      throw HttpError(401, "Your account is not verified");
+    }
+
+    const passwordCompare = await bcrypt.compare(password, user.password);
+
+    if (!passwordCompare) {
+      throw HttpError(401, "Email or password invalid");
+    }
+
+    const payload = {
+      id: user._id,
+    };
+    const { SECRET_KEY } = process.env;
+
+    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "23h" });
+    await User.findByIdAndUpdate(user._id, { token });
+    res.status(200).json({
+      token,
+      user: {
+        email,
+        subscription: user.subscription,
+      },
+    });
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
   }
-
-  if (!user.verify) {
-    throw HttpError(401, "Your account is not verified");
-  }
-
-  const passwordCompare = await bcrypt.compare(password, user.password);
-
-  if (!passwordCompare) {
-    throw HttpError(401, "Email or password invalid");
-  }
-
-  const payload = {
-    id: user._id,
-  };
-  const { SECRET_KEY } = process.env;
-
-  const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "24h" });
-  await User.findByIdAndUpdate(user._id, { token });
-  res.status(200).json({
-    token,
-    user: {
-      email,
-      subscription: user.subscription,
-    },
-  });
 };
 
 export const getCurrent = async (req, res) => {

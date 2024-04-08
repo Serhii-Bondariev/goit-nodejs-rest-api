@@ -1,4 +1,4 @@
-import { HttpError } from "../helpers/index.js";
+import HttpError from "../helpers/HttpError.js";
 
 const checkAvatarUpload = (req, res, next) => {
   if (!req.file) {
